@@ -234,10 +234,8 @@ void printMenu()
 void printTitle()
 {
     clrscr();
-    printf ("        ************************\n");
-    printf ("        *    Credits Roller    *\n");
-    printf ("        * c.1989 Pierre Faller *\n");
-    printf ("        ************************\n");
+    printf ("Credits Roller\n");
+    printf ("c.1989 Pierre Faller\n");
 }
 
 bool loadFile(char* fname, char* target, word max_size)
@@ -252,7 +250,6 @@ bool loadFile(char* fname, char* target, word max_size)
     }
 	read_size = fread(target, sizeof(char), max_size, fp);
 	fclose(fp);
-    //~ if(read_size != max_size)
     if(!read_size)
     {
         printf("Unexpected end of file %s!\n", fname);
@@ -264,10 +261,7 @@ bool loadFile(char* fname, char* target, word max_size)
 byte loadCredits(char* fname)
 {   
     if(loadFile(fname, (char*)(creditsTextAddr), -1) == SUCCESS)
-    {
-        //~ strcpy(fname, userInput);  // and memorize its name
         return SUCCESS;
-    }
     else
         return FAILURE;
 }
@@ -290,6 +284,7 @@ void vScroll()
     word text_ptr = creditsTextAddr;
     word screen_ptr = PEEKW(ATA_DLIST + 4);
     bool running = true;
+    byte counter = 0;
     
     while(!startKeyPressed())
     {
@@ -301,17 +296,36 @@ void vScroll()
     {
         setScreenAt(text_ptr);
         text_ptr += 40;
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
+        POKE(ATA_VSCROL, 7 & counter++);
         waitVbiEnd();
         if(optionKeyPressed())
             running = false;
     }
+}
+
+void modifyDisplayList()
+{
+    byte* ptr = (byte*)PEEKW(ATA_DLIST);
+    byte index;
+    
+    // edit display list to allow vscroll
+    *(ptr + 3) |= ATA_DL_VSCROL;
+    for(index=6;index<=28;index++)
+        *(ptr + index) |= ATA_DL_VSCROL;
 }
 
 void cmdLoadCredits()
@@ -421,9 +435,11 @@ void cmdChangeSpeed()
 void cmdGo()
 {
     setCreditsEnvironement();
+    POKE(ATA_VSCROL, 0);
     
     vScroll();
     
+    POKE(ATA_VSCROL, 0);
     setMenuEnvironement();
 }
 
@@ -485,6 +501,8 @@ int main (void)
     CreditsForegroundColor = 8;
     creditsTextAddr = 0x4000;
 
+    modifyDisplayList();
+    
     // TODO: create a load/save ALL
     loadCredits("NIKON.SCR");
     loadFont("ACCENTUE.FNT");

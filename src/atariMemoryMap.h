@@ -21,6 +21,8 @@
 #define ATA_CHBAS               756 // 0x02f4
 #define ATA_SCREEN_ADDR      -25568 // 0x9c20 39968
 #define ATA_CONSOL           -12257 // 0xd01f 53279
+#define ATA_HSCROL           -11260 // 0xd404 54276
+#define ATA_VSCROL           -11259 // 0xd405 54277
 
 /* ************ */
 /* ** VALUES ** */
@@ -33,6 +35,8 @@
 #define ATA_DEFAULT_PLAYFIELD_COLOR 148
 #define ATA_DEFAULT_TEXT_COLOR 202
 #define ATA_DEFAULT_BORDER_COLOR 0
+
+#define ATA_DL_VSCROL 0x20
 
 /* ************ */
 /* ** MACROS ** */

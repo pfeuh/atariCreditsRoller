@@ -32,9 +32,20 @@ def_list=(
 ("ATA_MEMLO", 743),
 ("ATA_CHBAS", 756),
 ("ATA_SCREEN_ADDR", -25568),
-("ATA_CONSOL", -12257),)
+("ATA_CONSOL", -12257),
+("ATA_HSCROL", 54276),
+("ATA_VSCROL", 54277),)
 
+table = {}
 for label, value in def_list:
-    sys.stdout.write(getDefine(value, label))
+    key = value
+    if key < 0:
+        key += 65536
+    table[key] = label
+
+keys = table.keys()
+keys.sort()
+for key in keys:
+    sys.stdout.write(getDefine(key, table[key]))
 
 
