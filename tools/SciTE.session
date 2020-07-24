@@ -1,0 +1,26 @@
+# SciTE session file
+
+buffer.1.path=/usr/share/cc65/include/atari.h
+buffer.1.position=1
+buffer.1.scroll=44
+
+buffer.2.path=/media/pfeuh/70b90f4a-e5a6-4a83-bf19-1feffc44cab0/Documents/sources/C_language/cc65/creditsGenerator/src/atariMemoryMap.h
+buffer.2.position=705
+buffer.2.scroll=6
+
+buffer.3.path=/media/pfeuh/70b90f4a-e5a6-4a83-bf19-1feffc44cab0/Documents/sources/C_language/cc65/creditsGenerator/src/credits.c
+buffer.3.position=1067
+buffer.3.scroll=51
+
+buffer.4.path=/media/pfeuh/70b90f4a-e5a6-4a83-bf19-1feffc44cab0/Documents/sources/C_language/cc65/creditsGenerator/src/text.s
+buffer.4.position=488
+buffer.4.scroll=0
+
+buffer.5.path=/media/pfeuh/70b90f4a-e5a6-4a83-bf19-1feffc44cab0/Documents/sources/C_language/cc65/creditsGenerator/tools/doTheJob.py
+buffer.5.position=128
+buffer.5.scroll=5
+buffer.5.current=1
+
+buffer.6.path=/media/pfeuh/70b90f4a-e5a6-4a83-bf19-1feffc44cab0/Documents/sources/C_language/cc65/creditsGenerator/tools/compute.py
+buffer.6.position=295
+buffer.6.scroll=0

@@ -1,0 +1,394 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <atari.h>
+#include <conio.h>
+#include <stdbool.h>
+#include <peekpoke.h>
+#include <string.h>
+#include "types.h";
+#include "atariMemoryMap.h";
+
+//~ #define DEFAULT_FONT_NAME "ACCENTUE.FNT"
+//~ #define DEFAULT_FONT_NAME "KAISER.FNT"
+#define FNAME_SIZE 13
+#define FONT_SIZE 1024
+#define SUCCESS 0
+#define FAILURE 1
+#define ERR_FILE_NOT_FOUND 2
+#define ERR_BAD_FILE_SIZE 3
+#define ERR_BAD_USER_BYTE -1
+
+/* In text.s */
+//~ extern const char menu_04[];
+//~ extern const char menu_05[];
+//~ extern const char menu_06[];
+//~ extern const char menu_07[];
+//~ extern const char menu_08[];
+//~ extern const char menu_09[];
+//~ extern const char menu_10[];
+//~ extern const char menu_11[];
+//~ extern const char menu_12[];
+//~ extern const char menu_13[];
+extern const char DEFAUT_FONT_NAME[]; 
+
+char user_input[FNAME_SIZE];
+char font_name[FNAME_SIZE];
+char credits_name[FNAME_SIZE];
+byte stopped;
+byte consol_value;
+byte crd_font_base;
+byte sys_font_base;
+byte crd_bg_color;
+byte crd_fg_color;
+byte crd_speed;
+word credits_base;
+
+#define NORMAL 0
+#define SLOW 1
+#define FAST 2
+
+void setCreditsEnvironement()
+{
+    // let's switch to credits scrolling environement
+    POKE(ATA_CHBAS, crd_font_base);
+    POKE(ATA_TEXT_COLOR, crd_fg_color);
+    POKE(ATA_BG_COLOR, crd_bg_color);
+    POKE(ATA_BORDER_COLOR, crd_bg_color);
+}
+
+void setMenuEnvironement()
+{
+    // let's switch to menu environement
+    POKE(ATA_CHBAS, sys_font_base);
+    POKE(ATA_TEXT_COLOR, ATA_DEFAULT_TEXT_COLOR);
+    POKE(ATA_BG_COLOR, ATA_DEFAULT_PLAYFIELD_COLOR);
+    POKE(ATA_BORDER_COLOR, ATA_DEFAULT_BORDER_COLOR);
+}
+
+char getChar()
+{
+    while(!kbhit());    
+    return cgetc();
+}
+
+char getCommand()
+{
+    char command;
+
+    while(!kbhit())
+        if(consol_value != PEEK(ATA_CONSOL))
+        {
+            consol_value = PEEK(ATA_CONSOL);
+            //~ cputhex8(consol_value);
+            if(optionKeyPressed) setCreditsEnvironement();
+            if(startKeyPressed) setMenuEnvironement();
+        }
+    
+    command = cgetc();
+    //~ cputhex8(command);
+    //~ printf ( "%c\n", command);
+    return command;
+}
+
+byte isValidChar(char car)
+{
+    if(car == '.') return true;
+    if(car < '0') return false;
+    if(car <= '9') return true; // 0-9
+    if(car < 'A') return false; 
+    if(car <= 'Z') return true; // A-Z
+    if(car < 'a') return false;
+    if(car <= 'z') return true; // a-z
+    return false;
+}
+
+char* getUserString()
+{
+    // protected from buffer overflow
+    byte index = 0;
+    byte run = true;
+    char car;
+
+    while(run)
+    {
+        car = getChar();
+    
+        if(isValidChar(car))
+        {
+            if(index < (FNAME_SIZE - 1))
+            {
+                user_input[index++] = car;
+                cputc(car);
+                user_input[index] = 0;
+            }
+        }
+        else
+        {
+            switch(car)
+            {
+                case CH_DEL:
+                    if(index != 0)
+                    {
+                        printf("%c", car);
+                        user_input[index] = 0;
+                        index--;
+                    }
+                    break;
+                case CH_ESC:
+                    cputc(car);
+                    run = false;
+                    *user_input = 0;
+                    break;
+                case CH_ENTER:
+                    run = false;
+                    break;
+                default:
+                    //~ printf("%c", CH_BEL);
+                    break;
+            }
+        }
+    }
+    
+    printf("\n");
+    
+    return user_input;
+    //~ return NULL;
+}
+
+int getUserByte(char* text)
+{
+    byte index = 0;
+    byte car;
+    word value = 0;
+    //~ char* buf = getUserString()
+    //~ if(!buf)
+        //~ return ERR_BAD_USER_BYTE;
+    
+    while(text[index])
+    {
+        car = text[index];
+        switch(car)
+        {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                value = value * 10 + car - '0';
+                if(value > 255)
+                    return ERR_BAD_USER_BYTE;
+                index++;
+                break;
+            default:
+                return ERR_BAD_USER_BYTE;
+                break;
+        }
+    }
+    return value;
+}
+
+void printMenu()
+{
+    printf ("\n  C : load Credits     %s\n", credits_name);
+    printf ("  F : load Font        %s\n", font_name);
+    printf ("  S : Speed            ");
+    switch(crd_speed)
+    {
+        case SLOW:
+            printf ("Slow\n");
+            break;
+        case NORMAL:
+            printf ("Normal\n");
+            break;
+        case FAST:
+            printf ("Fast\n");
+            break;
+    }
+    printf ("  B : Background color %d\n", crd_bg_color);
+    printf ("  T : Text color       %d\n", crd_fg_color);
+    printf ("  G : Go!\n");
+    printf ("  X : eXit\n");
+    //~ printf ("MEMTOP ");
+    //~ cputhex16(ATA_MEMLO);
+    printf ("\n");
+    
+}
+
+void printTitle()
+{
+    clrscr();
+    printf ("       ************************\n");
+    printf ("       *    Credits Roller    *\n");
+    printf ("       * c.1989 Pierre Faller *\n");
+    printf ("       ************************\n");
+}
+
+byte loadFile(char* fname, char* target, word max_size)
+{
+    FILE *fp;
+    word read_size; 
+    fp = fopen(fname, "rb");
+    if (fp == NULL) 
+    {
+        printf("File %s not found!\n", fname);
+		return FAILURE;
+    }
+	read_size = fread(target, sizeof(char), max_size, fp);
+	fclose(fp);
+    if(read_size != max_size)
+    {
+        printf("Unexpected end of file %s!\n", fname);
+		return FAILURE;
+    }
+	return SUCCESS;
+}
+
+byte loadCredits(char* fname)
+{   
+    if(loadFile(fname, (char*)(credits_base), -1) == SUCCESS)
+    {
+        strcpy(fname, user_input);  // and memorize its name
+        return SUCCESS;
+    }
+    else
+        return FAILURE;
+}
+
+byte loadFont(char* fname)
+{
+    byte font_base = (PEEK(ATA_RAMTOP) - 16);
+    
+    if(loadFile(fname, (char*)(font_base * 256), FONT_SIZE) == SUCCESS)
+    {
+        crd_font_base = font_base;
+        strcpy(fname, user_input);  // and memorize its name
+        return SUCCESS;
+    }
+    else
+        return FAILURE;
+}
+
+void cmdLoadCredits()
+{
+    char*fname;
+    
+    printf("Input credits name : ");
+    fname =  getUserString();
+    if(*fname)
+    {
+        if(loadCredits(fname) == SUCCESS)
+            strcpy(credits_name, fname);
+    }
+}
+
+void cmdLoadFont()
+{
+    char*fname;
+    
+    printf("Input font name : ");
+    fname =  getUserString();
+    if(*fname)
+    {
+        if(loadFont(fname) == SUCCESS)
+            strcpy(font_name, fname);
+    }
+}
+
+void cmdChangeBackgroundColor()
+{
+    int   value;
+    char* text;
+    
+    printf("Input bg color value : ");
+    text = getUserString();
+    if(!*text)
+        return;
+    
+    value = getUserByte(text);
+    if(value == ERR_BAD_USER_BYTE)
+        printf("Bad 8 bits value!\n");
+    else
+        crd_bg_color = value;
+}
+
+void cmdChangeTextColor()
+{
+    int   value;
+    char* text;
+    
+    printf("Input text color value : ");
+    text = getUserString();
+    if(!*text)
+        return;
+    
+    value = getUserByte(text);
+    if(value == ERR_BAD_USER_BYTE)
+        printf("Bad 8 bits value!\n");
+    else
+        crd_fg_color = value;
+}
+
+void execCommand(char command)
+{
+    switch(command)
+    {
+        case CH_ENTER:
+            printMenu();
+            break;
+        case 'x':
+        case 'X':
+            stopped = true;
+            break;
+        case 'c':
+        case 'C':
+            cmdLoadCredits();
+            break;
+        case 'f':
+        case 'F':
+            cmdLoadFont();
+            break;
+        case 'b':
+        case 'B':
+            cmdChangeBackgroundColor();
+            break;
+        case 't':
+        case 'T':
+            cmdChangeTextColor();
+            break;
+        default:
+            printf("%c", CH_BEL);
+            break;
+    }
+}
+
+int main (void)
+{
+    char command;
+    
+    consol_value  = PEEK(ATA_CONSOL);
+    strcpy(font_name, "<ROM FONT>");
+    strcpy(credits_name, "<EMPTY>");
+    sys_font_base = PEEK(ATA_CHBAS);
+    crd_font_base = sys_font_base;
+    crd_speed = NORMAL;
+    crd_bg_color = 66;
+    crd_fg_color = 8;
+    credits_base = 0x4000;
+    setMenuEnvironement();
+    
+    printTitle();
+    printMenu();
+        
+    while(!stopped)
+    {        
+        printf ("  Select an option : \n");
+        command = getCommand();
+        execCommand(command);
+    }
+    return EXIT_SUCCESS;
+}
