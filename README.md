@@ -1,3 +1,2 @@
 # atariCreditsRoller
-An Atari 800 program to make film credits
-Written with cc65
+An Atari 800 program to make film credits... Written with cc65
