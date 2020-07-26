@@ -15,6 +15,7 @@
 #define SUCCESS false
 #define FAILURE true
 #define ERR_BAD_USER_BYTE -1
+#define FRAME_NUM (RTCLOK + 2)
 
 /* In text.s */
 //~ extern const char DEFAUT_fontName[]; 
@@ -43,18 +44,18 @@ void newLine()
 
 void waitVbiEnd()
 {
-    byte frame_num = PEEK(ATA_FRM_CNT_LOW);
-    while(frame_num == PEEK(ATA_FRM_CNT_LOW));
+    byte frame_num = PEEK(FRAME_NUM);
+    while(frame_num == PEEK(FRAME_NUM));
 }
 
 void setScreenAt(word base)
 {
-    POKEW(PEEKW(ATA_DLIST) + 4, base);
+    POKEW(PEEKW(SDLSTL) + 4, base);
 }
 
 void setFontAtPage(byte page)
 {
-    POKEW(ATA_CHBAS, page);
+    POKEW(CHBAS, page);
 }
 
 void setCreditsEnvironement()
@@ -62,9 +63,9 @@ void setCreditsEnvironement()
     // let's switch to credits scrolling environement
     setScreenAt(creditsTextAddr);
     setFontAtPage(creditsFontPageNum);
-    POKE(ATA_TEXT_COLOR, CreditsForegroundColor);
-    POKE(ATA_BG_COLOR, CreditsBackgroundColor);
-    POKE(ATA_BORDER_COLOR, CreditsBackgroundColor);
+    POKE(COLOR1, CreditsForegroundColor);
+    POKE(COLOR2, CreditsBackgroundColor);
+    POKE(COLOR4, CreditsBackgroundColor);
 }
 
 void setMenuEnvironement()
@@ -72,9 +73,9 @@ void setMenuEnvironement()
     // let's switch to menu environement
     setScreenAt(MenuTextAddr);
     setFontAtPage(MenuFontPageNum);
-    POKE(ATA_TEXT_COLOR, ATA_DEFAULT_TEXT_COLOR);
-    POKE(ATA_BG_COLOR, ATA_DEFAULT_PLAYFIELD_COLOR);
-    POKE(ATA_BORDER_COLOR, ATA_DEFAULT_BORDER_COLOR);
+    POKE(COLOR1, ATA_DEFAULT_COLOR1);
+    POKE(COLOR2, ATA_DEFAULT_COLOR2);
+    POKE(COLOR4, ATA_DEFAULT_COLOR4);
 }
 
 char getChar()
@@ -86,9 +87,9 @@ char getChar()
 char getCommand()
 {
     while(!kbhit())
-        if(consolValue != PEEK(ATA_CONSOL))
+        if(consolValue != PEEK(CONSOL))
         {
-            consolValue = PEEK(ATA_CONSOL);
+            consolValue = PEEK(CONSOL);
             if(startKeyPressed())
             {
                 setCreditsEnvironement();
@@ -224,7 +225,7 @@ void printMenu()
     printf ("  T : Text color       %d\n", CreditsForegroundColor);
     printf ("  G : Go!\n");
     printf ("  X : eXit\n");
-    //~ printf ("MEMTOP %04x\n", PEEKW(ATA_MEMLO));
+    //~ printf ("MEMTOP %05d %04x\n", PEEKW(MEMLO), PEEKW(MEMLO));
     //~ printf ("CREDITS TEXT %04x\n", creditsTextAddr);
     //~ printf ("SYSTEM TEXT %04x\n", MenuTextAddr);
     //~ newLine();
@@ -268,7 +269,7 @@ byte loadCredits(char* fname)
 
 byte loadFont(char* fname)
 {
-    byte font_base = (PEEK(ATA_RAMTOP) - 8);
+    byte font_base = (PEEK(RAMTOP) - 8);
     
     if(loadFile(fname, (char*)(font_base * 256), FONT_SIZE) == SUCCESS)
     {
@@ -282,7 +283,7 @@ byte loadFont(char* fname)
 void vScroll()
 {
     word text_ptr = creditsTextAddr;
-    word screen_ptr = PEEKW(ATA_DLIST + 4);
+    word screen_ptr = PEEKW(SDLSTL + 4);
     bool running = true;
     byte counter = 0;
     
@@ -296,21 +297,21 @@ void vScroll()
     {
         setScreenAt(text_ptr);
         text_ptr += 40;
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
-        POKE(ATA_VSCROL, 7 & counter++);
+        POKE(VSCROL, 7 & counter++);
         waitVbiEnd();
         if(optionKeyPressed())
             running = false;
@@ -319,13 +320,15 @@ void vScroll()
 
 void modifyDisplayList()
 {
-    byte* ptr = (byte*)PEEKW(ATA_DLIST);
+    byte* ptr = (byte*)PEEKW(SDLSTL);
     byte index;
     
-    // edit display list to allow vscroll
+    // edit display list to allow vertical scrolling
     *(ptr + 3) |= ATA_DL_VSCROL;
-    for(index=6;index<=28;index++)
+    //~ for(index=6;index<=28;index++)
+    for(index=6;index<=27;index++)
         *(ptr + index) |= ATA_DL_VSCROL;
+    //~ *(ptr + index) = ATA_DL_BLK8;
 }
 
 void cmdLoadCredits()
@@ -435,11 +438,11 @@ void cmdChangeSpeed()
 void cmdGo()
 {
     setCreditsEnvironement();
-    POKE(ATA_VSCROL, 0);
+    POKE(VSCROL, 0);
     
     vScroll();
     
-    POKE(ATA_VSCROL, 0);
+    POKE(VSCROL, 0);
     setMenuEnvironement();
 }
 
@@ -488,12 +491,12 @@ int main (void)
 {
     char command;
     
-    consolValue = PEEK(ATA_CONSOL);
+    consolValue = PEEK(CONSOL);
     strcpy(fontName, "<ROM FONT>");
     strcpy(creditsName, "<EMPTY>");
     
-    MenuFontPageNum = PEEK(ATA_CHBAS);
-    MenuTextAddr = PEEKW(PEEKW(ATA_DLIST) + 4);
+    MenuFontPageNum = PEEK(CHBAS);
+    MenuTextAddr = PEEKW(PEEKW(SDLSTL) + 4);
     
     creditsFontPageNum = MenuFontPageNum;
     scrollSpeed = NORMAL;

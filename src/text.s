@@ -1,12 +1,44 @@
-.export _DEFAUT_FONT_NAME
-; _menu_04:  .asciiz "  L : Load credits   "
-; _menu_05:  .asciiz "  F : load Font        "
-; _menu_06:  .asciiz "  S : Slow speed"
-; _menu_07:  .asciiz "  N : Normal speed"
-; _menu_08:  .asciiz "  Q : Quick  speed"
-; _menu_09:  .asciiz "  B : Background color"
-; _menu_10:  .asciiz "  T : Text color"
-; _menu_11:  .asciiz "  G : Go!"
-; _menu_12:  .asciiz "  X : eXit"
-; _menu_13:  .asciiz "  Select an option : "
-_DEFAUT_FONT_NAME: .asciiz "default Font"
+.export _dlist, _scrolledTextPtr
+
+;                   ---********************---
+;                   ---*** display list ***---
+;                   ---********************---
+    
+                    ; some constants from antic.h
+                    DL_BLK8      = $70 ; 8 empty lines
+                    DL_CHR40x8x1 = $02 ; text 40 colums of 8x8 pixels 1 color
+                    DL_LMS       = $40 ; load memory screen
+                    DL_JVB       = $41 ; jump & wait end of verticl blank
+                    DL_VSCROL    = $20 ; attribute fine vertical scroll
+
+_dlist:             .byte DL_BLK8
+                    .byte DL_BLK8
+                    .byte DL_BLK8
+                    .byte DL_CHR40x8x1 | DL_LMS
+_scrolledTextPtr:   .word $00
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1 | DL_VSCROL
+                    .byte DL_CHR40x8x1
+                    .byte DL_JVB
+                    .word _dlist

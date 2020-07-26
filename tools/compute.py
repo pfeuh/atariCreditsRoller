@@ -7,38 +7,45 @@ import sys
 import shutil
 import subprocess
 
+# labels got from "mapping the Atari"
+# https://www.atariarchives.org/mapping/memorymap.php
+
 def getDefine(value, label):
     if value < 0:
         value += 65536
     if value >= 32768:
         value2 = -(65536 - value)
-        text = "#define %-20s %6d // 0x%04x %d\n"%(label, value2, value, value)
+        text = "#define %-6s %6d // 0x%04x %d\n"%(label, value2, value, value)
     else:
         value2 = value
-        text = "#define %-20s %6d // 0x%04x\n"%(label, value2, value)
+        text = "#define %-6s %6d // 0x%04x\n"%(label, value2, value)
     return text
 
 def_list=(
-("ATA_FRM_CNT_HI", 18),
-("ATA_FRM_CNT_MID", 19),
-("ATA_FRM_CNT_LOW", 20),
-("ATA_LMARGIN", 82),
-("ATA_RMARGIN", 83),
-("ATA_RAMTOP", 106),
-("ATA_DLIST", 560),
-("ATA_TEXT_COLOR", 709),
-("ATA_BG_COLOR", 710),
-("ATA_BORDER_COLOR", 712),
-("ATA_MEMLO", 743),
-("ATA_CHBAS", 756),
-("ATA_SCREEN_ADDR", -25568),
-("ATA_CONSOL", -12257),
-("ATA_HSCROL", 54276),
-("ATA_VSCROL", 54277),)
+(18, "RTCLOK"),
+(82, "LMARGN"),
+(83, "RMARGN"),
+(106, "RAMTOP"),
+(560, "SDLSTL"),
+(704, "PCOLR0"),
+(705, "PCOLR1"),
+(706, "PCOLR2"),
+(707, "PCOLR3"),
+(708, "COLOR0"),
+(709, "COLOR1"),
+(710, "COLOR2"),
+(711, "COLOR3"),
+(712, "COLOR4"),
+(743, "MEMLO",),
+(756, "CHBAS",),
+(-12257, "CONSOL",),
+(54276, "HSCROL",),
+(54277, "VSCROL",),)
 
 table = {}
-for label, value in def_list:
-    key = value
+for record in def_list:
+    key = record[0]
+    label = record[1]
     if key < 0:
         key += 65536
     table[key] = label
@@ -47,5 +54,3 @@ keys = table.keys()
 keys.sort()
 for key in keys:
     sys.stdout.write(getDefine(key, table[key]))
-
-

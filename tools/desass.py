@@ -49,4 +49,4 @@ with open("DISASSEMBLED.TXT", "wb") as fp:
     #~ fp.write(desass.desass(0x600, mem.peek, nb_lines=200))
     #~ fp.write(mem.dump(0x600))
     fp.write(desass_antic.desass(0x9014, mem.peek))
-    fp.write(desass.desass(0x934, mem.peek, nb_lines=200))
+    fp.write(desass.desass(0x934, mem.peek, nb_lines=2000))

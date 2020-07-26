@@ -711,6 +711,17 @@ class MEMORY:
         if len(modified):
             return (modified[0], modified[-1] - modified[0] + 1)
 
+    def getMemlo(self, start=0):
+        # returns address of first not modified byte after last modified bytes area
+        memlo = None
+        for addr in range(start,MEMORY_SIZE):
+            if self.modified[addr]:
+                memlo = addr
+        if memlo == None:
+            return 0
+        else:
+            return memlo + 1
+
     def getBloc(self, start, size):
         text = ""
         max = start+size
@@ -961,7 +972,27 @@ if __name__ == '__main__':
         for index, car in enumerate(bytes):
             assert ord(car) == index
             
+        mem=MEMORY()
+        mem.poke(34567, 1)
+        memlo = mem.getMemlo()
+        assert memlo == 34568
+        mem=MEMORY()
+        memlo = mem.getMemlo()
+        assert memlo == 0
+            
         sys.stdout.write("A L L   T E S T S   P A S S E D !\n")
     
     utest()
+    
+    from disk import *
+    
+    disk = VIRTUAL_DISK("./../out/DISK.XFD")
+    #~ sys.stdout.write(str(disk.directory()))
+    bytes = disk.readFile("A")
+    with open("./A", "wb") as fp:
+        fp.write(bytes)
+    mem = MEMORY()
+    mem.loadAtariBinaryFile("A", strict=False)
+    sys.stdout.write("MEMLO 0x%04x %05d\n"%(mem.getMemlo(), mem.getMemlo()))
+    
     

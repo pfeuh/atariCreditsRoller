@@ -7,22 +7,25 @@
 /* ** MEMORY MAPPING ** */
 /* ******************** */
 
-#define ATA_FRM_CNT_HI           18 // 0x0012
-#define ATA_FRM_CNT_MID          19 // 0x0013
-#define ATA_FRM_CNT_LOW          20 // 0x0014
-#define ATA_LMARGIN              82 // 0x0052
-#define ATA_RMARGIN              83 // 0x0053
-#define ATA_RAMTOP              106 // 0x006a
-#define ATA_DLIST               560 // 0x0230
-#define ATA_TEXT_COLOR          709 // 0x02c5
-#define ATA_BG_COLOR            710 // 0x02c6
-#define ATA_BORDER_COLOR        712 // 0x02c8
-#define ATA_MEMLO               743 // 0x02e7
-#define ATA_CHBAS               756 // 0x02f4
-#define ATA_SCREEN_ADDR      -25568 // 0x9c20 39968
-#define ATA_CONSOL           -12257 // 0xd01f 53279
-#define ATA_HSCROL           -11260 // 0xd404 54276
-#define ATA_VSCROL           -11259 // 0xd405 54277
+#define RTCLOK     18 // 0x0012
+#define LMARGN     82 // 0x0052
+#define RMARGN     83 // 0x0053
+#define RAMTOP    106 // 0x006a
+#define SDLSTL    560 // 0x0230
+#define PCOLR0    704 // 0x02c0
+#define PCOLR1    705 // 0x02c1
+#define PCOLR2    706 // 0x02c2
+#define PCOLR3    707 // 0x02c3
+#define COLOR0    708 // 0x02c4
+#define COLOR1    709 // 0x02c5
+#define COLOR2    710 // 0x02c6
+#define COLOR3    711 // 0x02c7
+#define COLOR4    712 // 0x02c8
+#define MEMLO     743 // 0x02e7
+#define CHBAS     756 // 0x02f4
+#define CONSOL -12257 // 0xd01f 53279
+#define HSCROL -11260 // 0xd404 54276
+#define VSCROL -11259 // 0xd405 54277
 
 /* ************ */
 /* ** VALUES ** */
@@ -32,19 +35,20 @@
 #define ATA_KEY_SELECT 2
 #define ATA_KEY_START  1
 
-#define ATA_DEFAULT_PLAYFIELD_COLOR 148
-#define ATA_DEFAULT_TEXT_COLOR 202
-#define ATA_DEFAULT_BORDER_COLOR 0
+#define ATA_DEFAULT_COLOR2 148
+#define ATA_DEFAULT_COLOR1 202
+#define ATA_DEFAULT_COLOR4 0
 
 #define ATA_DL_VSCROL 0x20
+#define ATA_DL_BLK8 0x70
 
 /* ************ */
 /* ** MACROS ** */
 /* ************ */
 
-#define optionKeyPressed() (!(PEEK(ATA_CONSOL) & ATA_KEY_OPTION))
-#define selectKeyPressed() (!(PEEK(ATA_CONSOL) & ATA_KEY_SELECT))
-#define startKeyPressed()  (!(PEEK(ATA_CONSOL) & ATA_KEY_START))
+#define optionKeyPressed() (!(PEEK(CONSOL) & ATA_KEY_OPTION))
+#define selectKeyPressed() (!(PEEK(CONSOL) & ATA_KEY_SELECT))
+#define startKeyPressed()  (!(PEEK(CONSOL) & ATA_KEY_START))
 
 #endif
 
