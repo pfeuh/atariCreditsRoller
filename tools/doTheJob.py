@@ -12,7 +12,6 @@ import subprocess
 
 ATARI_DISK_NAME = "./../out/DISK.XFD"
 VERBOSE = "-verbose" in sys.argv
-FILE_SHOWED = False
 
 def copyFileToToAtari(ifname, ofname, disk):
     global FILE_SHOWED
@@ -20,9 +19,6 @@ def copyFileToToAtari(ifname, ofname, disk):
         sys.stdout.write("copying %s -> %s->%s\n"%(ifname, disk.name, ofname))
     with open(ifname, "rb") as fp:
         bytes = fp.read(-1)
-    if not FILE_SHOWED:
-        sys.stdout.write("%d bytes\n"%(len(bytes)))
-        FILE_SHOWED = True
     disk.writeFile(ofname, bytes)
 
 def copyAtariToToAtari(ifname, idiskname, ofname, odisk):
@@ -37,10 +33,11 @@ def getInfo(dname, fname):
     bytes = temp_disk.readFile("A")
     with open(fname, "wb") as fp:
       fp.write(bytes)  
-    
     mem = memory.MEMORY()
     mem.loadAtariBinaryFile(fname, strict=False)
-    return mem.map() + str(mem.getModifiedRange())
+    ret_text  = "MEMLO        0x%04x %05d\n"%(mem.getMemlo(), mem.getMemlo())
+    ret_text += "Program size 0x%04x %05d\n"%(mem.getModifiedSize(), mem.getModifiedSize())
+    return ret_text
 
 #create a brand new Atari disk
 params = ["./createDisk.sh"]

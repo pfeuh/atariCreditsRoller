@@ -651,7 +651,6 @@ class MEMORY:
         self.endianess = endianess
         self.data      = [0 for x in range(MEMORY_SIZE)]
         self.modified  = [NOT_MODIFIED for x in range(MEMORY_SIZE)]
-        #~ self.glyphes = ['.' for x in range(32)]+[chr(x) for x in range(32, 128)]+['.' for x in range(128)]
         
     def setPC(self, pc):
         self.__pc = pc
@@ -721,6 +720,14 @@ class MEMORY:
             return 0
         else:
             return memlo + 1
+            
+    def getModifiedSize(self, start=0):
+        # returns quantity of modified bytes
+        count = 0
+        for addr in range(start,MEMORY_SIZE):
+            if self.modified[addr]:
+                count += 1
+        return count
 
     def getBloc(self, start, size):
         text = ""
@@ -994,5 +1001,7 @@ if __name__ == '__main__':
     mem = MEMORY()
     mem.loadAtariBinaryFile("A", strict=False)
     sys.stdout.write("MEMLO 0x%04x %05d\n"%(mem.getMemlo(), mem.getMemlo()))
+    sys.stdout.write("USED  0x%04x %05d\n"%(mem.getModifiedSize(), mem.getModifiedSize()))
+    sys.stdout.write(mem.dump(9000))
     
     

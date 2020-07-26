@@ -26,6 +26,7 @@ def_list=(
 (82, "LMARGN"),
 (83, "RMARGN"),
 (106, "RAMTOP"),
+(512, "VDSLST"),
 (560, "SDLSTL"),
 (704, "PCOLR0"),
 (705, "PCOLR1"),
@@ -39,8 +40,19 @@ def_list=(
 (743, "MEMLO",),
 (756, "CHBAS",),
 (-12257, "CONSOL",),
+(53266, "COLPM0"),
+(53267, "COLPM1"),
+(53268, "COLPM2"),
+(53269, "COLPM3"),
+(53270, "COLPF0"),
+(53271, "COLPF1"),
+(53272, "COLPF2"),
+(53273, "COLPF3"),
+(53274, "COLBK"),
 (54276, "HSCROL",),
-(54277, "VSCROL",),)
+(54277, "VSCROL",),
+(54282, "WSYNC",),
+)
 
 table = {}
 for record in def_list:

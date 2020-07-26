@@ -8,17 +8,13 @@
 #include "types.h";
 #include "atariMemoryMap.h";
 
-//~ #define DEFAULT_fontName "ACCENTUE.FNT"
-//~ #define DEFAULT_fontName "KAISER.FNT"
 #define FNAME_SIZE 13
 #define FONT_SIZE 1024
 #define SUCCESS false
 #define FAILURE true
 #define ERR_BAD_USER_BYTE -1
 #define FRAME_NUM (RTCLOK + 2)
-
-/* In text.s */
-//~ extern const char DEFAUT_fontName[]; 
+#define SIZE_OF_BLANK_LINES 1000
 
 char userInput[FNAME_SIZE];
 char fontName[FNAME_SIZE];
@@ -32,14 +28,33 @@ byte CreditsForegroundColor;
 byte scrollSpeed;
 word creditsTextAddr;
 word MenuTextAddr;
+bool rainbowFlag;
 
 #define NORMAL 0
 #define SLOW 1
 #define FAST 2
 
+#define ATA_DL_VSCROL 0x20
+#define ATA_DL_BLK8 0x70
+
+#define FRAME_NUM (RTCLOK + 2)
+
 void newLine()
 {
     printf("\n");
+}
+
+void doRainbow()
+{
+    byte rainbow_color = PEEK(FRAME_NUM);
+    byte count_down = 0;
+    
+    while(++count_down)
+    {
+        POKE(WSYNC, 0);
+        POKE(COLPF0, rainbow_color--);
+        POKE(COLPF1, rainbow_color--);
+    }
 }
 
 void waitVbiEnd()
@@ -93,8 +108,15 @@ char getCommand()
             if(startKeyPressed())
             {
                 setCreditsEnvironement();
-                while(startKeyPressed());
+                setScreenAt(creditsTextAddr + SIZE_OF_BLANK_LINES);
+                while(startKeyPressed())
+                {
+                    if(rainbowFlag)
+                        doRainbow();
+                    waitVbiEnd();
+                }
                 setMenuEnvironement();
+                setScreenAt(MenuTextAddr);
             }
         }
     
@@ -199,36 +221,41 @@ int getUserByte(char* text)
     return value;
 }
 
-void printSpeed()
+char* getSpeedLabel()
 {
     switch(scrollSpeed)
     {
         case SLOW:
-            printf ("Slow\n");
+            return ("Slow");
             break;
         case NORMAL:
-            printf ("Normal\n");
+            return ("Normal");
             break;
         case FAST:
-            printf ("Fast\n");
+            return ("Fast");
             break;
     }
+    return 0;
+}
+
+char* getRainbowLabel()
+{
+    if(rainbowFlag)
+        return ("ON");
+    else
+        return ("OFF");
 }
 
 void printMenu()
 {
     printf ("\n  C : load Credits     %s\n", creditsName);
     printf ("  F : load Font        %s\n", fontName);
-    printf ("  S : Speed            ");
-    printSpeed();
+    printf ("  S : Speed            %s\n", getSpeedLabel());
+    printf ("  S : Rainbow          %s\n", getRainbowLabel());
     printf ("  B : Background color %d\n", CreditsBackgroundColor);
     printf ("  T : Text color       %d\n", CreditsForegroundColor);
     printf ("  G : Go!\n");
     printf ("  X : eXit\n");
-    //~ printf ("MEMTOP %05d %04x\n", PEEKW(MEMLO), PEEKW(MEMLO));
-    //~ printf ("CREDITS TEXT %04x\n", creditsTextAddr);
-    //~ printf ("SYSTEM TEXT %04x\n", MenuTextAddr);
-    //~ newLine();
     
 }
 
@@ -261,7 +288,8 @@ bool loadFile(char* fname, char* target, word max_size)
 
 byte loadCredits(char* fname)
 {   
-    if(loadFile(fname, (char*)(creditsTextAddr), -1) == SUCCESS)
+    //~ if(loadFile(fname, (char*)(creditsTextAddr), -1) == SUCCESS)
+    if(loadFile(fname, (char*)(creditsTextAddr + SIZE_OF_BLANK_LINES), -1) == SUCCESS)
         return SUCCESS;
     else
         return FAILURE;
@@ -285,34 +313,32 @@ void vScroll()
     word text_ptr = creditsTextAddr;
     word screen_ptr = PEEKW(SDLSTL + 4);
     bool running = true;
-    byte counter = 0;
+    byte line_num = 0;
     
     while(!startKeyPressed())
     {
+        if(rainbowFlag)
+            doRainbow();
+        waitVbiEnd();
         if(optionKeyPressed())
             running = false;
     }
     
     while(running)
     {
-        setScreenAt(text_ptr);
-        text_ptr += 40;
-        POKE(VSCROL, 7 & counter++);
+        if(!(line_num & 7))
+        {
+            setScreenAt(text_ptr);
+            text_ptr += 40;
+        }
+        
+        POKE(VSCROL, 7 & line_num++);
+
+        if(rainbowFlag)
+            doRainbow();
+        
         waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
-        POKE(VSCROL, 7 & counter++);
-        waitVbiEnd();
+        
         if(optionKeyPressed())
             running = false;
     }
@@ -325,10 +351,8 @@ void modifyDisplayList()
     
     // edit display list to allow vertical scrolling
     *(ptr + 3) |= ATA_DL_VSCROL;
-    //~ for(index=6;index<=28;index++)
     for(index=6;index<=27;index++)
         *(ptr + index) |= ATA_DL_VSCROL;
-    //~ *(ptr + index) = ATA_DL_BLK8;
 }
 
 void cmdLoadCredits()
@@ -406,6 +430,7 @@ void cmdChangeTextColor()
 void cmdChangeSpeed()
 {
     byte command;
+    bool modified = true;
     printf("Select speed : Slow Normal Fast");
     command = getChar();
     switch(command)
@@ -413,26 +438,36 @@ void cmdChangeSpeed()
         case 's':
         case 'S':
             scrollSpeed = SLOW;
-            printSpeed();
             break;
         case 'n':
         case 'N':
             scrollSpeed = NORMAL;
-            printSpeed();
             break;
         case 'f':
         case 'F':
             scrollSpeed = FAST;
-            printSpeed();
             break;
         case CH_ESC:
             cputc(command);
+            modified = false;
             newLine();
             break;
         default:
+            modified = false;
             printf("%c", CH_BEL);
             break;
     }
+    if(modified)
+        printf("\n%s\n", getSpeedLabel());
+}
+
+void cmdSetRainbow()
+{
+    if(rainbowFlag)
+        rainbowFlag = false;
+    else
+        rainbowFlag = true;
+    printf("\nRainbow set to %s\n", getRainbowLabel());
 }
 
 void cmdGo()
@@ -473,6 +508,10 @@ void execCommand(char command)
         case 'S':
             cmdChangeSpeed();
             break;
+        case 'r':
+        case 'R':
+            cmdSetRainbow();
+            break;
         case 'g':
         case 'G':
             cmdGo();
@@ -501,7 +540,7 @@ int main (void)
     creditsFontPageNum = MenuFontPageNum;
     scrollSpeed = NORMAL;
     CreditsBackgroundColor = 66;
-    CreditsForegroundColor = 8;
+    CreditsForegroundColor = 14;
     creditsTextAddr = 0x4000;
 
     modifyDisplayList();
@@ -511,6 +550,7 @@ int main (void)
     loadFont("ACCENTUE.FNT");
     strcpy(creditsName, "NIKON.SCR");
     strcpy(fontName, "ACCENTUE.FNT");
+    rainbowFlag = true;
     
     setMenuEnvironement();
     
