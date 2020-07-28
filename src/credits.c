@@ -7,6 +7,7 @@
 #include <string.h>
 #include "types.h";
 #include "atariMemoryMap.h";
+#include "printTool.h"
 
 #define FNAME_SIZE 13
 #define FONT_SIZE 1024
@@ -16,7 +17,6 @@
 #define FRAME_NUM (RTCLOK + 2)
 #define SIZE_OF_BLANK_LINES 1000
 
-char userInput[FNAME_SIZE];
 char fontName[FNAME_SIZE];
 char creditsName[FNAME_SIZE];
 bool stopApp;
@@ -26,7 +26,6 @@ byte MenuFontPageNum;
 byte CreditsBackgroundColor;
 byte CreditsForegroundColor;
 byte scrollSpeed;
-word creditsTextAddr;
 word MenuTextAddr;
 bool rainbowFlag;
 
@@ -34,28 +33,32 @@ bool rainbowFlag;
 #define SLOW 1
 #define FAST 2
 
+// display list instructions for ANTIC
 #define ATA_DL_VSCROL 0x20
 #define ATA_DL_BLK8 0x70
 
 #define FRAME_NUM (RTCLOK + 2)
 
-void newLine()
-{
-    printf("\n");
-}
+#define NB_COLUMNS 40
+#define CREDITS_TEXT_ADDR 0x5000
 
-void doRainbow()
-{
-    byte rainbow_color = PEEK(FRAME_NUM);
-    byte count_down = 0;
-    
-    while(++count_down)
-    {
-        POKE(WSYNC, 0);
-        POKE(COLPF0, rainbow_color--);
-        POKE(COLPF1, rainbow_color--);
-    }
-}
+// TODO: protect against RESET
+// TODO: disk catalog before asking for filemane
+// TODO: avoid printf, do a minimal lib to print
+// TODO: create a load/save full configuation (text + font + ...)
+
+extern const char titleText[];
+extern const char menuOpt1[];
+extern const char menuOpt2[];
+extern const char menuOpt3[];
+extern const char menuOpt4[];
+extern const char menuOpt5[];
+extern const char menuOpt6[];
+extern const char menuOpt7[];
+extern const char menuOpt8[];
+
+// In the assembler file rainbow.s for timing problem
+extern void doRainbow();
 
 void waitVbiEnd()
 {
@@ -76,7 +79,7 @@ void setFontAtPage(byte page)
 void setCreditsEnvironement()
 {
     // let's switch to credits scrolling environement
-    setScreenAt(creditsTextAddr);
+    setScreenAt(CREDITS_TEXT_ADDR);
     setFontAtPage(creditsFontPageNum);
     POKE(COLOR1, CreditsForegroundColor);
     POKE(COLOR2, CreditsBackgroundColor);
@@ -107,8 +110,9 @@ char getCommand()
             consolValue = PEEK(CONSOL);
             if(startKeyPressed())
             {
+                waitVbiEnd();
                 setCreditsEnvironement();
-                setScreenAt(creditsTextAddr + SIZE_OF_BLANK_LINES);
+                setScreenAt(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES);
                 while(startKeyPressed())
                 {
                     if(rainbowFlag)
@@ -121,70 +125,6 @@ char getCommand()
         }
     
     return cgetc();
-}
-
-bool isValidChar(char car)
-{
-    if(car == '.') return true;
-    if(car < '0') return false;
-    if(car <= '9') return true; // 0-9
-    if(car < 'A') return false; 
-    if(car <= 'Z') return true; // A-Z
-    if(car < 'a') return false;
-    if(car <= 'z') return true; // a-z
-    return false;
-}
-
-char* getUserString()
-{
-    // protected from buffer overflow
-    byte index = 0;
-    bool run = true;
-    char car;
-
-    while(run)
-    {
-        car = getChar();
-    
-        if(isValidChar(car))
-        {
-            if(index < (FNAME_SIZE - 1))
-            {
-                userInput[index++] = car;
-                cputc(car);
-                userInput[index] = 0;
-            }
-        }
-        else
-        {
-            switch(car)
-            {
-                case CH_DEL:
-                    if(index != 0)
-                    {
-                        printf("%c", car);
-                        userInput[index] = 0;
-                        index--;
-                    }
-                    break;
-                case CH_ESC:
-                    cputc(car);
-                    run = false;
-                    *userInput = 0;
-                    break;
-                case CH_ENTER:
-                    run = false;
-                    break;
-                default:
-                    //~ printf("%c", CH_BEL);
-                    break;
-            }
-        }
-    }
-    
-    newLine();
-    return userInput;
-    //~ return NULL;
 }
 
 int getUserByte(char* text)
@@ -248,22 +188,20 @@ char* getRainbowLabel()
 
 void printMenu()
 {
-    printf ("\n  C : load Credits     %s\n", creditsName);
-    printf ("  F : load Font        %s\n", fontName);
-    printf ("  S : Speed            %s\n", getSpeedLabel());
-    printf ("  S : Rainbow          %s\n", getRainbowLabel());
-    printf ("  B : Background color %d\n", CreditsBackgroundColor);
-    printf ("  T : Text color       %d\n", CreditsForegroundColor);
-    printf ("  G : Go!\n");
-    printf ("  X : eXit\n");
-    
-}
-
-void printTitle()
-{
-    clrscr();
-    printf ("Credits Roller\n");
-    printf ("c.1989 Pierre Faller\n");
+    print(menuOpt1);
+    print(creditsName);
+    print(menuOpt2);
+    print(fontName);
+    print(menuOpt3);
+    print(getSpeedLabel());
+    print(menuOpt4);
+    print(getRainbowLabel());
+    print(menuOpt5);
+    printDec(CreditsBackgroundColor);
+    print(menuOpt6);
+    printDec(CreditsForegroundColor);
+    print(menuOpt7);
+    print(menuOpt8);
 }
 
 bool loadFile(char* fname, char* target, word max_size)
@@ -288,8 +226,7 @@ bool loadFile(char* fname, char* target, word max_size)
 
 byte loadCredits(char* fname)
 {   
-    //~ if(loadFile(fname, (char*)(creditsTextAddr), -1) == SUCCESS)
-    if(loadFile(fname, (char*)(creditsTextAddr + SIZE_OF_BLANK_LINES), -1) == SUCCESS)
+    if(loadFile(fname, (char*)(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES), -1) == SUCCESS)
         return SUCCESS;
     else
         return FAILURE;
@@ -310,29 +247,57 @@ byte loadFont(char* fname)
 
 void vScroll()
 {
-    word text_ptr = creditsTextAddr;
+    word text_ptr = CREDITS_TEXT_ADDR;
     word screen_ptr = PEEKW(SDLSTL + 4);
     bool running = true;
+    bool line_number_changed;
     byte line_num = 0;
-    
+    byte toggle = 0;
+
     while(!startKeyPressed())
     {
         if(rainbowFlag)
             doRainbow();
         waitVbiEnd();
         if(optionKeyPressed())
+        {
             running = false;
+            break;
+        }
     }
     
     while(running)
     {
-        if(!(line_num & 7))
+        line_number_changed = false;
+        toggle ^= 1;
+    
+        switch(scrollSpeed)
         {
-            setScreenAt(text_ptr);
-            text_ptr += 40;
+            case SLOW:
+                if(!toggle)
+                {
+                    line_num ++;
+                    line_number_changed = true;
+                }
+                break;
+            case NORMAL:
+                line_num ++;
+                line_number_changed = true;
+                break;
+            case FAST:
+                line_num += 2;
+                line_number_changed = true;
+                break;
         }
-        
-        POKE(VSCROL, 7 & line_num++);
+        if(line_number_changed)
+        {
+            if((line_num & 7) == 0)
+            {
+                setScreenAt(text_ptr);
+                text_ptr += NB_COLUMNS;
+            }
+            POKE(VSCROL, 7 & line_num);
+        }
 
         if(rainbowFlag)
             doRainbow();
@@ -360,7 +325,7 @@ void cmdLoadCredits()
     char*fname;
     
     printf("Input credits name : ");
-    fname =  getUserString();
+    fname =  inputString();
     if(*fname)
     {
         if(loadCredits(fname) == SUCCESS)
@@ -376,7 +341,7 @@ void cmdLoadFont()
     char*fname;
     
     printf("Input font name : ");
-    fname =  getUserString();
+    fname =  inputString();
     if(*fname)
     {
         if(loadFont(fname) == SUCCESS)
@@ -393,7 +358,7 @@ void cmdChangeBackgroundColor()
     char* text;
     
     printf("Input bg color value : ");
-    text = getUserString();
+    text = inputString();
     if(!*text)
         return;
     
@@ -413,7 +378,7 @@ void cmdChangeTextColor()
     char* text;
     
     printf("Input text color value : ");
-    text = getUserString();
+    text = inputString();
     if(!*text)
         return;
     
@@ -541,11 +506,9 @@ int main (void)
     scrollSpeed = NORMAL;
     CreditsBackgroundColor = 66;
     CreditsForegroundColor = 14;
-    creditsTextAddr = 0x4000;
 
     modifyDisplayList();
     
-    // TODO: create a load/save ALL
     loadCredits("NIKON.SCR");
     loadFont("ACCENTUE.FNT");
     strcpy(creditsName, "NIKON.SCR");
@@ -554,12 +517,14 @@ int main (void)
     
     setMenuEnvironement();
     
-    printTitle();
+    clrscr();
+    printf(titleText);
+
     printMenu();
 
     while(!stopApp)
     {        
-        printf ("  Select an option : \n");
+        printf ("Select an option : \n");
         command = getCommand();
         execCommand(command);
     }

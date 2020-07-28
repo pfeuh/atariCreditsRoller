@@ -37,6 +37,7 @@
 #define HSCROL -11260 // 0xd404 54276
 #define VSCROL -11259 // 0xd405 54277
 #define WSYNC  -11254 // 0xd40a 54282
+#define VCOUNT -11253 // 0xd40b 54283
 
 /* ************ */
 /* ** VALUES ** */

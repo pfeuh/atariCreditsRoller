@@ -52,6 +52,7 @@ def_list=(
 (54276, "HSCROL",),
 (54277, "VSCROL",),
 (54282, "WSYNC",),
+(54283, "VCOUNT"),
 )
 
 table = {}
