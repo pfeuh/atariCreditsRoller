@@ -11,6 +11,22 @@ VIDEO_MODE_REVERTED = 2
 
 EOL = 0
 
+CH_DELCHR       = chr(0xFE) # delete char under the cursor
+CH_ENTER        = chr(0x9B)
+CH_ESC          = chr(0x1B)
+CH_CURS_UP      = chr(28)
+CH_CURS_DOWN    = chr(29)
+CH_CURS_LEFT    = chr(30)
+CH_CURS_RIGHT   = chr(31)
+CH_TAB          = chr(0x7F) # tabulator
+CH_EOL          = chr(0x9B) # end-of-line marker
+CH_CLR          = chr(0x7D) # clear screen
+CH_BEL          = chr(0xFD) # bell
+CH_DEL          = chr(0x7E) # back space (delete char to the left)
+CH_RUBOUT       = chr(0x7E) # back space (old, deprecated)
+CH_DELLINE      = chr(0x9C) # delete line
+CH_INSLINE      = chr(0x9D) # insert line
+
 def getGlyphe(byte, multi=False):
     byte &=127
     if multi:
@@ -75,15 +91,27 @@ def getAll(records, multi=False):
 
 if __name__ == "__main__":
 
+    #~ records = [
+        #~ ("%c<Credits Roller      c.1989 Pierre Faller>"%CH_CLR, "titleText"),
+        #~ ("\nC : load <C>redits     ", "menuOpt1"),
+        #~ ("\nF : load <F>ont        ", "menuOpt2"),
+        #~ ("\nS : <S>peed            ", "menuOpt3"),
+        #~ ("\nR : <R>ainbow          ", "menuOpt4"),
+        #~ ("\nB : <B>ackground color ", "menuOpt5"),
+        #~ ("\nT : <T>ext color       ", "menuOpt6"),
+        #~ ("\nG : <G>o!", "menuOpt7"),
+        #~ ("\nX : e<X>it\n", "menuOpt8"),]
+
     records = [
         ("<Credits Roller      c.1989 Pierre Faller>", "titleText"),
-        ("\nC : load <C>redits     ", "menuOpt1"),
-        ("\nF : load <F>ont        ", "menuOpt2"),
-        ("\nS : <S>peed            ", "menuOpt3"),
-        ("\nR : <R>ainbow          ", "menuOpt4"),
-        ("\nB : <B>ackground color ", "menuOpt5"),
-        ("\nT : <T>ext color       ", "menuOpt6"),
-        ("\nG : <G>o!", "menuOpt7"),
-        ("\nX : e<X>it\n", "menuOpt8"),]
+        ("\r\nC : load <C>redits     ", "menuOpt1"),
+        ("\r\nF : load <F>ont        ", "menuOpt2"),
+        ("\r\nS : <S>peed            ", "menuOpt3"),
+        ("\r\nR : <R>ainbow          ", "menuOpt4"),
+        ("\r\nB : <B>ackground color ", "menuOpt5"),
+        ("\r\nT : <T>ext color       ", "menuOpt6"),
+        ("\r\nG : <G>o!", "menuOpt7"),
+        ("\r\nX : e<X>it\n\r", "menuOpt8"),
+        ("Select speed : <S>low <N>ormal <F>ast", "speedLabels"),]
 
     sys.stdout.write(getAll(records))

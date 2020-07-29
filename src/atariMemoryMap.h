@@ -24,6 +24,7 @@
 #define COLOR4    712 // 0x02c8
 #define MEMLO     743 // 0x02e7
 #define CHBAS     756 // 0x02f4
+#define CH        764 // 0x02fc
 #define COLPM0 -12270 // 0xd012 53266
 #define COLPM1 -12269 // 0xd013 53267
 #define COLPM2 -12268 // 0xd014 53268

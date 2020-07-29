@@ -6,32 +6,7 @@
 
 char inputStringBuffer[INPUT_STRING_BUFFER_SIZE];
 
-void newLine(void)
-{
-    printf("\n");
-    //~ cputc(CH_EOL);
-    //~ gotox(0);
-}
-
-void print(char const str_ptr[])
-{
-    while(*str_ptr)
-    {
-        if(*str_ptr == 10)
-            newLine();
-        else
-            cputc(*str_ptr);
-        str_ptr++;
-    }
-}
-
-void printLn(char const str_ptr[])
-{
-    print(str_ptr);
-    newLine();
-}
-
-void printDec(unsigned int value)
+void printNumber(unsigned int value)
 {
     char charbuf[5];
     unsigned char x = 0;
@@ -46,8 +21,6 @@ void printDec(unsigned int value)
     {
         charbuf[x++] = (value % 10) + '0';
         value = value / 10;
-        //~ if(!value)
-            //~ charbuf[x++] = '0';
     }
         
     while(--x != 255)
@@ -75,7 +48,7 @@ char* inputString(void)
 
     while(run)
     {
-        car = getchar();
+        car = cgetc();
     
         if(isValidChar(car))
         {
@@ -93,17 +66,20 @@ char* inputString(void)
                 case CH_DEL:
                     if(index != 0)
                     {
-                        printf("%c", car);
+                        cputc(car);
                         inputStringBuffer[index] = 0;
                         index--;
                     }
                     break;
                 case CH_ESC:
-                    cputc(car);
+                    cputc(CH_ESC);
+                    printf("\n");
+                    //~ cputc(car);
                     run = false;
                     *inputStringBuffer = 0;
                     break;
                 case CH_ENTER:
+                    printf("\n");
                     run = false;
                     break;
                 default:
@@ -111,7 +87,40 @@ char* inputString(void)
             }
         }
     }
-    
-    newLine();
     return inputStringBuffer;
 }
+
+int inputNumber(char* text)
+{
+    unsigned char index = 0;
+    char car;
+    unsigned int value = 0;
+    
+    while(text[index])
+    {
+        car = text[index];
+        switch(car)
+        {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                value = value * 10 + car - '0';
+                if(value > 255)
+                    return ERR_BAD_USER_BYTE;
+                index++;
+                break;
+            default:
+                return ERR_BAD_USER_BYTE;
+                break;
+        }
+    }
+    return value;
+}
+

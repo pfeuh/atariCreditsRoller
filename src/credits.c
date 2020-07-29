@@ -1,3 +1,10 @@
+
+// TODO: protect against RESET
+// TODO: disk catalog before asking for filemane
+// TODO: create a load/save full configuation (text + font + ...)
+// TODO: sync problem, when pressing START, system font is still displayed during 1 frame
+// TODO: pressing START reveals that static frame is on VSCROLL = 1 instead of VSCROLL = 0
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <atari.h>
@@ -13,22 +20,10 @@
 #define FONT_SIZE 1024
 #define SUCCESS false
 #define FAILURE true
-#define ERR_BAD_USER_BYTE -1
 #define FRAME_NUM (RTCLOK + 2)
 #define SIZE_OF_BLANK_LINES 1000
 
-char fontName[FNAME_SIZE];
-char creditsName[FNAME_SIZE];
-bool stopApp;
-byte consolValue;
-byte creditsFontPageNum;
-byte MenuFontPageNum;
-byte CreditsBackgroundColor;
-byte CreditsForegroundColor;
-byte scrollSpeed;
-word MenuTextAddr;
-bool rainbowFlag;
-
+// rainbow's speed
 #define NORMAL 0
 #define SLOW 1
 #define FAST 2
@@ -37,15 +32,8 @@ bool rainbowFlag;
 #define ATA_DL_VSCROL 0x20
 #define ATA_DL_BLK8 0x70
 
-#define FRAME_NUM (RTCLOK + 2)
-
 #define NB_COLUMNS 40
 #define CREDITS_TEXT_ADDR 0x5000
-
-// TODO: protect against RESET
-// TODO: disk catalog before asking for filemane
-// TODO: avoid printf, do a minimal lib to print
-// TODO: create a load/save full configuation (text + font + ...)
 
 extern const char titleText[];
 extern const char menuOpt1[];
@@ -56,9 +44,27 @@ extern const char menuOpt5[];
 extern const char menuOpt6[];
 extern const char menuOpt7[];
 extern const char menuOpt8[];
-
-// In the assembler file rainbow.s for timing problem
+extern const char speedLabels[];
+// doRainbow() is in the assembler file rainbow.s for timing problem
 extern void doRainbow();
+
+char fontName[FNAME_SIZE];
+char creditsName[FNAME_SIZE];
+bool stopApp;
+byte consolValue;
+byte creditsFontPageNum;
+byte menuFontPageNum;
+byte creditsBackgroundColor;
+byte creditsTextColor;
+byte scrollSpeed;
+word menuTextAddr;
+bool rainbowFlag;
+word textSize;
+
+void printIOError()
+{
+    printf("I/O error!\n");
+}
 
 void waitVbiEnd()
 {
@@ -81,84 +87,19 @@ void setCreditsEnvironement()
     // let's switch to credits scrolling environement
     setScreenAt(CREDITS_TEXT_ADDR);
     setFontAtPage(creditsFontPageNum);
-    POKE(COLOR1, CreditsForegroundColor);
-    POKE(COLOR2, CreditsBackgroundColor);
-    POKE(COLOR4, CreditsBackgroundColor);
+    POKE(COLOR1, creditsTextColor);
+    POKE(COLOR2, creditsBackgroundColor);
+    POKE(COLOR4, creditsBackgroundColor);
 }
 
 void setMenuEnvironement()
 {
     // let's switch to menu environement
-    setScreenAt(MenuTextAddr);
-    setFontAtPage(MenuFontPageNum);
+    setScreenAt(menuTextAddr);
+    setFontAtPage(menuFontPageNum);
     POKE(COLOR1, ATA_DEFAULT_COLOR1);
     POKE(COLOR2, ATA_DEFAULT_COLOR2);
     POKE(COLOR4, ATA_DEFAULT_COLOR4);
-}
-
-char getChar()
-{
-    while(!kbhit());    
-    return cgetc();
-}
-
-char getCommand()
-{
-    while(!kbhit())
-        if(consolValue != PEEK(CONSOL))
-        {
-            consolValue = PEEK(CONSOL);
-            if(startKeyPressed())
-            {
-                waitVbiEnd();
-                setCreditsEnvironement();
-                setScreenAt(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES);
-                while(startKeyPressed())
-                {
-                    if(rainbowFlag)
-                        doRainbow();
-                    waitVbiEnd();
-                }
-                setMenuEnvironement();
-                setScreenAt(MenuTextAddr);
-            }
-        }
-    
-    return cgetc();
-}
-
-int getUserByte(char* text)
-{
-    byte index = 0;
-    byte car;
-    word value = 0;
-    
-    while(text[index])
-    {
-        car = text[index];
-        switch(car)
-        {
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                value = value * 10 + car - '0';
-                if(value > 255)
-                    return ERR_BAD_USER_BYTE;
-                index++;
-                break;
-            default:
-                return ERR_BAD_USER_BYTE;
-                break;
-        }
-    }
-    return value;
 }
 
 char* getSpeedLabel()
@@ -184,65 +125,6 @@ char* getRainbowLabel()
         return ("ON");
     else
         return ("OFF");
-}
-
-void printMenu()
-{
-    print(menuOpt1);
-    print(creditsName);
-    print(menuOpt2);
-    print(fontName);
-    print(menuOpt3);
-    print(getSpeedLabel());
-    print(menuOpt4);
-    print(getRainbowLabel());
-    print(menuOpt5);
-    printDec(CreditsBackgroundColor);
-    print(menuOpt6);
-    printDec(CreditsForegroundColor);
-    print(menuOpt7);
-    print(menuOpt8);
-}
-
-bool loadFile(char* fname, char* target, word max_size)
-{
-    FILE *fp;
-    word read_size; 
-    fp = fopen(fname, "rb");
-    if (fp == NULL) 
-    {
-        printf("File %s not found!\n", fname);
-		return FAILURE;
-    }
-	read_size = fread(target, sizeof(char), max_size, fp);
-	fclose(fp);
-    if(!read_size)
-    {
-        printf("Unexpected end of file %s!\n", fname);
-		return FAILURE;
-    }
-	return SUCCESS;
-}
-
-byte loadCredits(char* fname)
-{   
-    if(loadFile(fname, (char*)(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES), -1) == SUCCESS)
-        return SUCCESS;
-    else
-        return FAILURE;
-}
-
-byte loadFont(char* fname)
-{
-    byte font_base = (PEEK(RAMTOP) - 8);
-    
-    if(loadFile(fname, (char*)(font_base * 256), FONT_SIZE) == SUCCESS)
-    {
-        creditsFontPageNum = font_base;
-        return SUCCESS;
-    }
-    else
-        return FAILURE;
 }
 
 void vScroll()
@@ -271,24 +153,26 @@ void vScroll()
         line_number_changed = false;
         toggle ^= 1;
     
-        switch(scrollSpeed)
-        {
-            case SLOW:
-                if(!toggle)
-                {
+        if(!selectKeyPressed())
+            switch(scrollSpeed)
+            {
+                case SLOW:
+                    if(!toggle)
+                    {
+                        line_num ++;
+                        line_number_changed = true;
+                    }
+                    break;
+                case NORMAL:
                     line_num ++;
                     line_number_changed = true;
-                }
-                break;
-            case NORMAL:
-                line_num ++;
-                line_number_changed = true;
-                break;
-            case FAST:
-                line_num += 2;
-                line_number_changed = true;
-                break;
-        }
+                    break;
+                case FAST:
+                    line_num += 2;
+                    line_number_changed = true;
+                    break;
+            }
+        
         if(line_number_changed)
         {
             if((line_num & 7) == 0)
@@ -320,36 +204,82 @@ void modifyDisplayList()
         *(ptr + index) |= ATA_DL_VSCROL;
 }
 
+void printMenu()
+{
+    cprintf(menuOpt1);
+    cprintf(creditsName);
+    cputc('(');
+    printNumber(textSize);
+    cputc(')');
+    cprintf(menuOpt2);
+    cprintf(fontName);
+    cprintf(menuOpt3);
+    cprintf(getSpeedLabel());
+    cprintf(menuOpt4);
+    cprintf(getRainbowLabel());
+    cprintf(menuOpt5);
+    printNumber(creditsBackgroundColor);
+    cprintf(menuOpt6);
+    printNumber(creditsTextColor);
+    cprintf(menuOpt7);
+    cprintf(menuOpt8);
+}
+
+word loadFile(char* fname, char* target, word max_size)
+{
+    FILE *fp;
+    word read_size; 
+    fp = fopen(fname, "rb");
+    if (fp == NULL) 
+		return 0;
+	read_size = fread(target, sizeof(char), max_size, fp);
+	fclose(fp);
+	return read_size;
+}
+
+void loadCredits(char* fname)
+{   
+    word file_size = loadFile(fname, (char*)(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES), -1);
+    if (!file_size)
+        printIOError();
+    else
+    {
+        textSize = file_size;
+        strcpy(creditsName, fname);
+    }
+}
+
+void loadFont(char* fname)
+{
+    byte font_base = (PEEK(RAMTOP) - 8);
+    word file_size =  loadFile(fname, (char*)(font_base * 256), FONT_SIZE);
+    if (file_size < FONT_SIZE)
+        printIOError();
+    else
+    {
+        creditsFontPageNum = font_base;
+        strcpy(fontName, fname);
+    }
+}
+
 void cmdLoadCredits()
 {
     char*fname;
     
-    printf("Input credits name : ");
+    cprintf("Input credits name : ");
     fname =  inputString();
     if(*fname)
-    {
-        if(loadCredits(fname) == SUCCESS)
-        {
-            strcpy(creditsName, fname);
-            printf("Credits %s Loaded\n", creditsName);
-        }
-    }
+        loadCredits(fname);
 }
 
 void cmdLoadFont()
 {
     char*fname;
     
-    printf("Input font name : ");
+    cprintf("Input font name : ");
     fname =  inputString();
     if(*fname)
-    {
-        if(loadFont(fname) == SUCCESS)
-        {
-            strcpy(fontName, fname);
-            printf("Font %s Loaded\n", fontName);
-        }
-    }
+        loadFont(fname);
 }
 
 void cmdChangeBackgroundColor()
@@ -357,18 +287,20 @@ void cmdChangeBackgroundColor()
     int   value;
     char* text;
     
-    printf("Input bg color value : ");
+    cprintf("Input bg color value : ");
     text = inputString();
     if(!*text)
         return;
     
-    value = getUserByte(text);
+    value = inputNumber(text);
     if(value == ERR_BAD_USER_BYTE)
-        printf("Bad 8 bits value!\n");
+        cprintf("Bad 8 bits value!\n");
     else
     {
-        CreditsBackgroundColor = value;
-        printf("Bg color value %d\n", CreditsBackgroundColor);
+        creditsBackgroundColor = value;
+        cprintf("Bg color value ");
+        printNumber(creditsBackgroundColor);
+        cprintf("\n");
     }
 }
 
@@ -377,18 +309,20 @@ void cmdChangeTextColor()
     int   value;
     char* text;
     
-    printf("Input text color value : ");
+    cprintf("Input text color value : ");
     text = inputString();
     if(!*text)
         return;
     
-    value = getUserByte(text);
+    value = inputNumber(text);
     if(value == ERR_BAD_USER_BYTE)
-        printf("Bad 8 bits value!\n");
+        cprintf("Bad 8 bits value!\n");
     else
     {
-        CreditsForegroundColor = value;
-        printf("Bg color value %d\n", CreditsBackgroundColor);
+        creditsTextColor = value;
+        cprintf("Text color value ");
+        printNumber(creditsTextColor);
+        cprintf("\n");
     }
 }
 
@@ -396,8 +330,8 @@ void cmdChangeSpeed()
 {
     byte command;
     bool modified = true;
-    printf("Select speed : Slow Normal Fast");
-    command = getChar();
+    cprintf(speedLabels);
+    command = cgetc();
     switch(command)
     {
         case 's':
@@ -415,15 +349,14 @@ void cmdChangeSpeed()
         case CH_ESC:
             cputc(command);
             modified = false;
-            newLine();
+            //~ newLine();
             break;
         default:
             modified = false;
             printf("%c", CH_BEL);
             break;
     }
-    if(modified)
-        printf("\n%s\n", getSpeedLabel());
+    printf("\n");
 }
 
 void cmdSetRainbow()
@@ -432,7 +365,7 @@ void cmdSetRainbow()
         rainbowFlag = false;
     else
         rainbowFlag = true;
-    printf("\nRainbow set to %s\n", getRainbowLabel());
+    printf("Rainbow set to %s\n", getRainbowLabel());
 }
 
 void cmdGo()
@@ -446,11 +379,80 @@ void cmdGo()
     setMenuEnvironement();
 }
 
+bool isValidCommand(char cmd)
+{
+    switch(cmd)
+    {
+        case 'h':
+        case 'H':
+        case '?':
+        case 'x':
+        case 'X':
+        case 'c':
+        case 'C':
+        case 'f':
+        case 'F':
+        case 'b':
+        case 'B':
+        case 's':
+        case 'S':
+        case 'r':
+        case 'R':
+        case 'g':
+        case 'G':
+        case 't':
+        case 'T':
+            return true;
+            break;
+        default:
+            return false;
+    }
+}
+
+char getCommand()
+{
+    byte cmd;
+    
+    cprintf("Select an option : ");
+    while(1)
+    {
+        while(!kbhit())
+            if(consolValue != PEEK(CONSOL))
+            {
+                consolValue = PEEK(CONSOL);
+                if(startKeyPressed())
+                {
+                    waitVbiEnd();
+                    setCreditsEnvironement();
+                    setScreenAt(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES);
+                    while(startKeyPressed())
+                    {
+                        if(rainbowFlag)
+                            doRainbow();
+                        waitVbiEnd();
+                    }
+                    setMenuEnvironement();
+                    setScreenAt(menuTextAddr);
+                }
+            }
+        cmd =  cgetc();
+        if(isValidCommand(cmd))
+        {
+            printf("%c\n", cmd);
+            return cmd;
+        }
+        else
+            printf("%c\n", CH_BEL);
+    }
+}
+
 void execCommand(char command)
 {
     switch(command)
     {
-        case CH_ENTER:
+        case 'h':
+        case 'H':
+        case '?':
             printMenu();
             break;
         case 'x':
@@ -486,26 +488,24 @@ void execCommand(char command)
             cmdChangeTextColor();
             break;
         default:
-            printf("%c", CH_BEL);
+            cputc(CH_BEL);
             break;
     }
 }
 
 int main (void)
 {
-    char command;
-    
     consolValue = PEEK(CONSOL);
     strcpy(fontName, "<ROM FONT>");
     strcpy(creditsName, "<EMPTY>");
     
-    MenuFontPageNum = PEEK(CHBAS);
-    MenuTextAddr = PEEKW(PEEKW(SDLSTL) + 4);
+    menuFontPageNum = PEEK(CHBAS);
+    menuTextAddr = PEEKW(PEEKW(SDLSTL) + 4);
     
-    creditsFontPageNum = MenuFontPageNum;
+    creditsFontPageNum = menuFontPageNum;
     scrollSpeed = NORMAL;
-    CreditsBackgroundColor = 66;
-    CreditsForegroundColor = 14;
+    creditsBackgroundColor = 66;
+    creditsTextColor = 14;
 
     modifyDisplayList();
     
@@ -518,15 +518,13 @@ int main (void)
     setMenuEnvironement();
     
     clrscr();
-    printf(titleText);
+    cprintf(titleText);
 
     printMenu();
 
     while(!stopApp)
     {        
-        printf ("Select an option : \n");
-        command = getCommand();
-        execCommand(command);
+        execCommand(getCommand());
     }
     return EXIT_SUCCESS;
 }
