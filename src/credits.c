@@ -33,7 +33,7 @@
 #define ATA_DL_BLK8 0x70
 
 #define NB_COLUMNS 40
-#define CREDITS_TEXT_ADDR 0x5000
+#define TEXT_ADDR 0x5000
 
 extern const char titleText[];
 extern const char menuOpt1[];
@@ -49,13 +49,13 @@ extern const char speedLabels[];
 extern void doRainbow();
 
 char fontName[FNAME_SIZE];
-char creditsName[FNAME_SIZE];
+char textName[FNAME_SIZE];
 bool stopApp;
 byte consolValue;
-byte creditsFontPageNum;
+byte textFontPageNum;
 byte menuFontPageNum;
-byte creditsBackgroundColor;
-byte creditsTextColor;
+byte textBackgroundColor;
+byte textTextColor;
 byte scrollSpeed;
 word menuTextAddr;
 bool rainbowFlag;
@@ -82,14 +82,14 @@ void setFontAtPage(byte page)
     POKEW(CHBAS, page);
 }
 
-void setCreditsEnvironement()
+void setTextEnvironement()
 {
     // let's switch to credits scrolling environement
-    setScreenAt(CREDITS_TEXT_ADDR);
-    setFontAtPage(creditsFontPageNum);
-    POKE(COLOR1, creditsTextColor);
-    POKE(COLOR2, creditsBackgroundColor);
-    POKE(COLOR4, creditsBackgroundColor);
+    setScreenAt(TEXT_ADDR);
+    setFontAtPage(textFontPageNum);
+    POKE(COLOR1, textTextColor);
+    POKE(COLOR2, textBackgroundColor);
+    POKE(COLOR4, textBackgroundColor);
 }
 
 void setMenuEnvironement()
@@ -129,7 +129,7 @@ char* getRainbowLabel()
 
 void vScroll()
 {
-    word text_ptr = CREDITS_TEXT_ADDR;
+    word text_ptr = TEXT_ADDR;
     word screen_ptr = PEEKW(SDLSTL + 4);
     bool running = true;
     bool line_number_changed;
@@ -207,7 +207,7 @@ void modifyDisplayList()
 void printMenu()
 {
     cprintf(menuOpt1);
-    cprintf(creditsName);
+    cprintf(textName);
     cputc('(');
     printNumber(textSize);
     cputc(')');
@@ -218,9 +218,9 @@ void printMenu()
     cprintf(menuOpt4);
     cprintf(getRainbowLabel());
     cprintf(menuOpt5);
-    printNumber(creditsBackgroundColor);
+    printNumber(textBackgroundColor);
     cprintf(menuOpt6);
-    printNumber(creditsTextColor);
+    printNumber(textTextColor);
     cprintf(menuOpt7);
     cprintf(menuOpt8);
 }
@@ -237,15 +237,15 @@ word loadFile(char* fname, char* target, word max_size)
 	return read_size;
 }
 
-void loadCredits(char* fname)
+void loadText(char* fname)
 {   
-    word file_size = loadFile(fname, (char*)(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES), -1);
+    word file_size = loadFile(fname, (char*)(TEXT_ADDR + SIZE_OF_BLANK_LINES), -1);
     if (!file_size)
         printIOError();
     else
     {
         textSize = file_size;
-        strcpy(creditsName, fname);
+        strcpy(textName, fname);
     }
 }
 
@@ -257,19 +257,19 @@ void loadFont(char* fname)
         printIOError();
     else
     {
-        creditsFontPageNum = font_base;
+        textFontPageNum = font_base;
         strcpy(fontName, fname);
     }
 }
 
-void cmdLoadCredits()
+void cmdLoadText()
 {
     char*fname;
     
-    cprintf("Input credits name : ");
+    cprintf("Input text name : ");
     fname =  inputString();
     if(*fname)
-        loadCredits(fname);
+        loadText(fname);
 }
 
 void cmdLoadFont()
@@ -297,9 +297,9 @@ void cmdChangeBackgroundColor()
         cprintf("Bad 8 bits value!\n");
     else
     {
-        creditsBackgroundColor = value;
+        textBackgroundColor = value;
         cprintf("Bg color value ");
-        printNumber(creditsBackgroundColor);
+        printNumber(textBackgroundColor);
         cprintf("\n");
     }
 }
@@ -319,9 +319,9 @@ void cmdChangeTextColor()
         cprintf("Bad 8 bits value!\n");
     else
     {
-        creditsTextColor = value;
+        textTextColor = value;
         cprintf("Text color value ");
-        printNumber(creditsTextColor);
+        printNumber(textTextColor);
         cprintf("\n");
     }
 }
@@ -370,7 +370,7 @@ void cmdSetRainbow()
 
 void cmdGo()
 {
-    setCreditsEnvironement();
+    setTextEnvironement();
     POKE(VSCROL, 0);
     
     vScroll();
@@ -422,9 +422,9 @@ char getCommand()
                 consolValue = PEEK(CONSOL);
                 if(startKeyPressed())
                 {
-                    waitVbiEnd();
-                    setCreditsEnvironement();
-                    setScreenAt(CREDITS_TEXT_ADDR + SIZE_OF_BLANK_LINES);
+                    //~ waitVbiEnd();
+                    setTextEnvironement();
+                    setScreenAt(TEXT_ADDR + SIZE_OF_BLANK_LINES);
                     while(startKeyPressed())
                     {
                         if(rainbowFlag)
@@ -461,7 +461,7 @@ void execCommand(char command)
             break;
         case 'c':
         case 'C':
-            cmdLoadCredits();
+            cmdLoadText();
             break;
         case 'f':
         case 'F':
@@ -497,23 +497,22 @@ int main (void)
 {
     consolValue = PEEK(CONSOL);
     strcpy(fontName, "<ROM FONT>");
-    strcpy(creditsName, "<EMPTY>");
+    strcpy(textName, "<EMPTY>");
     
     menuFontPageNum = PEEK(CHBAS);
     menuTextAddr = PEEKW(PEEKW(SDLSTL) + 4);
     
-    creditsFontPageNum = menuFontPageNum;
-    scrollSpeed = NORMAL;
-    creditsBackgroundColor = 66;
-    creditsTextColor = 14;
+    textFontPageNum = menuFontPageNum;
 
     modifyDisplayList();
-    
-    loadCredits("NIKON.SCR");
+
+    // let's install some default stuff
+    loadText("NIKON.SCR");
     loadFont("ACCENTUE.FNT");
-    strcpy(creditsName, "NIKON.SCR");
-    strcpy(fontName, "ACCENTUE.FNT");
     rainbowFlag = true;
+    scrollSpeed = NORMAL;
+    textBackgroundColor = 66;
+    textTextColor = 14;
     
     setMenuEnvironement();
     
