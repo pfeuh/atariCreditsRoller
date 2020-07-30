@@ -3,6 +3,9 @@
 
 import sys
 
+MODE_ASM = 1
+MODE_C = 2
+
 REVERTED_VIDEO_ON = '<'
 REVERTED_VIDEO_OFF = '>'
 
@@ -52,42 +55,70 @@ def buildAtariText(text):
                 ret_str += chr(ord(car) + 128)
     return ret_str
 
-def getAS65Code(text, label="nonameStr", nb_columns=16, multi=False):
+def getCode(text, label="nonameStr", nb_columns=16, multi=False, mode=MODE_ASM):
+    if mode == MODE_ASM:
+        rem = ";"
+    elif mode == MODE_C:
+        rem = "//"
+    else:
+        raise Exception("Unexpected output mode %c!"%mode)
+    
     bytes = []
     for car in text:
         bytes.append(ord(car))
     bytes.append(EOL)
-        
-    ret_text = ".export _%s\n_%s:\n"%(label, label)
+
+    if mode == MODE_ASM:
+        ret_text = ".export _%s\n_%s:\n"%(label, label)
+    elif mode == MODE_C:
+        ret_text = "char %s[] = \n{\n"%label
     for col_num, value in enumerate(bytes):
         if not(col_num % nb_columns):
-            ret_text += "        .byte "
+            if mode == MODE_ASM:
+                ret_text += "        .byte "
+            elif mode == MODE_C:
+                ret_text += "    "
             scibuf = ""
 
         scibuf += getGlyphe(value, multi)
             
         if (col_num % nb_columns) == (nb_columns - 1):
-            ret_text += "$%02x "%value
-            ret_text += "; %s\n"%scibuf
+            if mode == MODE_ASM:
+                ret_text += "$%02x "%value
+            elif mode == MODE_C:
+                ret_text += "0x%02x, "%value
+            ret_text += "%s %s\n"%(rem, scibuf)
+            scibuf = ""
         else:
-            ret_text += "$%02x, "%value
+            if mode == MODE_ASM:
+                ret_text += "$%02x, "%value
+            elif mode == MODE_C:
+                ret_text += "0x%02x, "%value
             
     if col_num % nb_columns:
         ret_text = ret_text[:-2] + " "
         for count in range(nb_columns - (col_num % nb_columns) - 1):
-            ret_text += "     "
-        ret_text += "; %s\n"%scibuf
+            if mode == MODE_ASM:
+                ret_text += " " * len("$%02x, "%0)
+            elif mode == MODE_C:
+                ret_text += " " * len("0x%02x, "%0)
+        ret_text += "%s %s\n"%(rem, scibuf)
+        
+    if mode == MODE_C:
+        ret_text += "};\n"
+        
     return ret_text + "\n"
 
-def getAll(records, multi=False):
+def getAll(records, nb_columns=16, multi=False, mode=MODE_ASM):
     ret_text = ""
     declare_text = ""
     for record in records:
         text = record[0]
         label = record[1]
-        ret_text += getAS65Code(buildAtariText(text), label, multi=multi)
-        declare_text += "extern const char %s[];\n"%label
-    return ret_text + declare_text
+        ret_text += getCode(buildAtariText(text), label, nb_columns=nb_columns, multi=multi, mode=mode)
+        if mode in [MODE_ASM, MODE_C]:
+            declare_text += "extern const char %s[];\n"%label
+    return ret_text + declare_text + "\n"
 
 if __name__ == "__main__":
 
@@ -114,4 +145,5 @@ if __name__ == "__main__":
         ("\r\nX : e<X>it\n\r", "menuOpt8"),
         ("Select speed : <S>low <N>ormal <F>ast", "speedLabels"),]
 
-    sys.stdout.write(getAll(records))
+    sys.stdout.write(getAll(records, mode=MODE_C, nb_columns=8))
+    sys.stdout.write(getAll(records, mode=MODE_ASM))

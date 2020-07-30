@@ -65,12 +65,18 @@ copyPcFileToAtariDisk("./../src/CREDITS.COM", "A", disk)
 sys.stdout.write(getInfo(ATARI_DISK_NAME,  "A"))
 #~ copyPcFileToAtariDisk("./../src/CREDITS.COM", "DUP.SYS", disk)
 
-params = ["atari800"]
-params.append("-nobasic")
-params.append("-xl")
-params.append("-xlxe_rom")
-params.append("./ATARIXL.ROM")
+# launch atari800 emulator
+params = ["./emulo.sh"]
 errnum = subprocess.call(params)
 if errnum:
     sys.exit(errnum)
+
+#~ params = ["atari800"]
+#~ params.append("-nobasic")
+#~ params.append("-xl")
+#~ params.append("-xlxe_rom")
+#~ params.append("./ATARIXL.ROM")
+#~ errnum = subprocess.call(params)
+#~ if errnum:
+    #~ sys.exit(errnum)
 
